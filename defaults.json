@@ -1,0 +1,18 @@
+{
+  "TARGET_URLS": [
+    "https://entertainment.capitalone.com/events/5967004",
+    "https://entertainment.capitalone.com/events/5966933"
+  ],
+  "POLL_INTERVAL_MINUTES": 1,
+  "MIN_TICKETS": 2,
+  "DESIRED_QUANTITY": 4,
+  "CONFIRM_ORDER": true,
+  "TEST_MODE": false,
+  "NTFY_TOPIC": "ticketbot-cmd-7d006e0eb5",
+  "NTFY_PIN": "0603",
+  "CONTROL_PAGE_URL": "https://heyoray.github.io/ticketbot-control/",
+  "PUSHOVER_USER": "usmkq2yujzy7ytyw4yn4xxsmgixc79",
+  "PUSHOVER_TOKEN": "acjrf4q37dcgqdbcvbwegfiavdzmid",
+  "LOGIN_USERNAME": "rayh101195",
+  "LOGIN_PASSWORD": "Raymondisking1"
+}

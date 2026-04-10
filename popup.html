@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ticket Bot</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c28;
+    --border: #2a2a3a;
+    --accent: #7c3aed;
+    --accent-glow: rgba(124, 58, 237, 0.4);
+    --green: #10b981;
+    --green-glow: rgba(16, 185, 129, 0.3);
+    --red: #ef4444;
+    --yellow: #f59e0b;
+    --text: #e8e8f0;
+    --text-dim: #7070a0;
+    --mono: 'Space Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    width: 320px;
+    min-height: 480px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    overflow-x: hidden;
+  }
+
+  /* ── Header ───────────────────────────────── */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 16px 12px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .header::before {
+    content: '';
+    position: absolute;
+    top: -20px; right: -20px;
+    width: 120px; height: 120px;
+    background: var(--accent-glow);
+    border-radius: 50%;
+    filter: blur(40px);
+    pointer-events: none;
+  }
+
+  .header-title {
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .ticket-icon {
+    font-size: 18px;
+    filter: drop-shadow(0 0 6px var(--accent-glow));
+  }
+
+  .header-sub {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 3px;
+    font-family: var(--mono);
+  }
+
+  /* ── Status Pill ──────────────────────────── */
+  .status-bar {
+    padding: 10px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    border: 1px solid;
+    transition: all 0.3s;
+  }
+
+  .status-pill.idle {
+    background: rgba(112, 112, 160, 0.1);
+    border-color: var(--border);
+    color: var(--text-dim);
+  }
+
+  .status-pill.monitoring {
+    background: rgba(124, 58, 237, 0.15);
+    border-color: var(--accent);
+    color: #a78bfa;
+  }
+
+  .status-pill.found {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: var(--green);
+    color: var(--green);
+    animation: pulse-green 1.5s infinite;
+  }
+
+  .status-pill.error {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: var(--red);
+    color: var(--red);
+  }
+
+  @keyframes pulse-green {
+    0%, 100% { box-shadow: 0 0 0 0 var(--green-glow); }
+    50% { box-shadow: 0 0 0 4px transparent; }
+  }
+
+  .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .dot.pulse {
+    animation: blink 1.2s infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .check-count {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  /* ── Config Section ───────────────────────── */
+  .section {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+  }
+
+  .field {
+    margin-bottom: 10px;
+  }
+
+  .field:last-child { margin-bottom: 0; }
+
+  .field label {
+    display: block;
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+
+  .field input[type="text"],
+  .field input[type="number"],
+  .field input[type="url"],
+  .field input[type="password"] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 7px 10px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .field input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-glow);
+  }
+
+  .field input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .row .field { flex: 1; }
+
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 0;
+  }
+
+  .toggle-row span {
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  .toggle {
+    position: relative;
+    width: 36px;
+    height: 20px;
+  }
+
+  .toggle input { opacity: 0; width: 0; height: 0; }
+
+  .toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+
+  .toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 14px; height: 14px;
+    left: 2px; top: 2px;
+    background: var(--text-dim);
+    border-radius: 50%;
+    transition: 0.3s;
+  }
+
+  .toggle input:checked + .toggle-slider {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .toggle input:checked + .toggle-slider::before {
+    transform: translateX(16px);
+    background: white;
+  }
+
+  /* ── Log Feed ─────────────────────────────── */
+  .log-section {
+    padding: 10px 16px;
+  }
+
+  .log-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    height: 80px;
+    overflow-y: auto;
+    padding: 8px 10px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    scroll-behavior: smooth;
+  }
+
+  .log-box::-webkit-scrollbar { width: 4px; }
+  .log-box::-webkit-scrollbar-track { background: transparent; }
+  .log-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .log-line { margin-bottom: 2px; }
+  .log-line.success { color: var(--green); }
+  .log-line.warn { color: var(--yellow); }
+  .log-line.err { color: var(--red); }
+
+  /* ── Buttons ──────────────────────────────── */
+  .actions {
+    padding: 12px 16px;
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+
+  .btn-start {
+    background: var(--accent);
+    color: white;
+    box-shadow: 0 0 16px var(--accent-glow);
+  }
+
+  .btn-start:hover {
+    background: #6d28d9;
+    box-shadow: 0 0 24px var(--accent-glow);
+    transform: translateY(-1px);
+  }
+
+  .btn-stop {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+  }
+
+  .btn-stop:hover {
+    border-color: var(--red);
+    color: var(--red);
+    background: rgba(239, 68, 68, 0.08);
+  }
+
+  .btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* ── Found Banner ─────────────────────────── */
+  .found-banner {
+    margin: 0 16px 12px;
+    padding: 12px;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid var(--green);
+    border-radius: 8px;
+    display: none;
+  }
+
+  .found-banner.visible { display: block; }
+
+  .found-banner .found-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--green);
+    margin-bottom: 4px;
+  }
+
+  .found-banner .found-detail {
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  /* ── Scanning animation ───────────────────── */
+  .scan-line {
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    position: absolute;
+    left: 0; right: 0;
+    top: 0;
+    animation: scan 2s linear infinite;
+    display: none;
+  }
+
+  .scan-line.active { display: block; }
+
+  @keyframes scan {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(200%); }
+  }
+
+  /* ── URL List ─────────────────────────────── */
+  .url-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+
+  .url-item input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 6px 8px;
+    outline: none;
+    transition: border-color 0.2s;
+    min-width: 0;
+  }
+
+  .url-item input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-glow);
+  }
+
+  .url-item input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-remove-url {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1;
+    padding: 4px 7px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+
+  .btn-remove-url:hover {
+    border-color: var(--red);
+    color: var(--red);
+    background: rgba(239,68,68,0.08);
+  }
+
+  .btn-remove-url:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  .btn-add-url {
+    background: var(--surface2);
+    border: 1px dashed var(--border);
+    border-radius: 6px;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 6px 10px;
+    width: 100%;
+    transition: all 0.2s;
+    text-align: left;
+  }
+
+  .btn-add-url:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .btn-add-url:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="scan-line" id="scanLine"></div>
+  <div class="header-title">
+    <span class="ticket-icon">🎟️</span>
+    TicketBot
+  </div>
+  <div class="header-sub">capital one entertainment monitor</div>
+</div>
+
+<div class="status-bar">
+  <div class="status-pill idle" id="statusPill">
+    <div class="dot" id="statusDot"></div>
+    <span id="statusText">Idle</span>
+  </div>
+  <div class="check-count" id="checkCount"></div>
+</div>
+
+<!-- Found Banner -->
+<div class="found-banner" id="foundBanner">
+  <div class="found-title">🎉 Tickets Found!</div>
+  <div class="found-detail" id="foundDetail"></div>
+</div>
+
+<!-- Config -->
+<div class="section">
+  <div class="section-label">Event URLs</div>
+
+  <div id="urlList" style="margin-bottom:8px;"></div>
+
+  <button class="btn-add-url" id="btnAddUrl" type="button">+ Add URL</button>
+</div>
+
+<div class="section">
+  <div class="section-label">Settings</div>
+
+  <div class="row">
+    <div class="field">
+      <label>Poll Interval (min)</label>
+      <input type="number" id="pollInterval" value="5" min="1" max="60">
+    </div>
+    <div class="field">
+      <label>Min Tickets</label>
+      <input type="number" id="minTickets" value="2" min="1" max="20">
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="field">
+      <label>Checkout Qty</label>
+      <input type="number" id="desiredQty" value="4" min="1" max="20">
+    </div>
+    <div class="field" style="justify-content:flex-end;display:flex;align-items:flex-end;">
+      <div class="toggle-row" style="width:100%">
+        <span>Confirm Order <span style="font-size:10px;color:var(--text-dim);">(final step)</span></span>
+        <label class="toggle">
+          <input type="checkbox" id="confirmOrder">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="toggle-row" style="margin-top:6px;">
+    <span>Test Mode <span style="font-size:10px;color:var(--text-dim);">(no purchase)</span></span>
+    <label class="toggle">
+      <input type="checkbox" id="testMode" checked>
+      <span class="toggle-slider"></span>
+    </label>
+  </div>
+
+  <div class="field" style="margin-top:10px;">
+    <label>ntfy Topic <span style="font-weight:400;color:var(--text-dim);font-size:9px;">(command channel)</span></label>
+    <input type="text" id="ntfyTopic" placeholder="ticketbot-cmd-xxxxx" autocomplete="off">
+  </div>
+
+  <div class="toggle-row" style="margin-top:6px;">
+    <span>Session Alerts <span style="font-size:10px;color:var(--text-dim);">(notify on re-login)</span></span>
+    <label class="toggle">
+      <input type="checkbox" id="sessionNotify" checked>
+      <span class="toggle-slider"></span>
+    </label>
+  </div>
+</div>
+
+<!-- Login Credentials -->
+<div class="section">
+  <div class="section-label">Login Credentials <span style="font-weight:400;text-transform:none;font-size:9px;">(used if session expires)</span></div>
+  <div class="field">
+    <label>Username</label>
+    <input type="text" id="loginUsername" placeholder="Capital One username" autocomplete="off">
+  </div>
+  <div class="field">
+    <label>Password</label>
+    <input type="password" id="loginPassword" placeholder="Capital One password" autocomplete="off">
+  </div>
+  <div style="font-size:10px;color:var(--text-dim);margin-top:4px;line-height:1.5;">Stored locally in your browser only. Leave blank to skip auto-login.</div>
+</div>
+
+<!-- Log -->
+<div class="log-section">
+  <div class="section-label">Activity Log</div>
+  <div class="log-box" id="logBox">
+    <div class="log-line">Ready. Configure and press START.</div>
+  </div>
+</div>
+
+<!-- Actions -->
+<div class="actions">
+  <button class="btn btn-start" id="btnStart">▶ Start</button>
+  <button class="btn btn-stop" id="btnStop" disabled>■ Stop</button>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>

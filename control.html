@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>TicketBot Control</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    min-height: 100dvh;
+    background: #0a0a0f;
+    color: #e8e8f0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    padding-top: max(20px, env(safe-area-inset-top));
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 16px;
+  }
+
+  .header h1 {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+
+  .order-summary {
+    background: #13131a;
+    border: 1px solid #2a2a3a;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 24px;
+    text-align: center;
+  }
+
+  .order-summary .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #7070a0;
+    margin-bottom: 8px;
+  }
+
+  .order-summary .details {
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.5;
+    color: #e8e8f0;
+  }
+
+  .pin-gate {
+    max-width: 400px;
+    width: 100%;
+    margin: 0 auto 24px;
+    text-align: center;
+  }
+
+  .pin-gate .pin-label {
+    font-size: 13px;
+    color: #7070a0;
+    margin-bottom: 10px;
+  }
+
+  .pin-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+  }
+
+  .pin-input {
+    width: 140px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 2px solid #2a2a3a;
+    background: #13131a;
+    color: #e8e8f0;
+    font-size: 22px;
+    font-weight: 700;
+    text-align: center;
+    letter-spacing: 6px;
+    outline: none;
+    -webkit-appearance: none;
+  }
+
+  .pin-input:focus {
+    border-color: #7c3aed;
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.3);
+  }
+
+  .pin-input.error {
+    border-color: #ef4444;
+    animation: shake 0.4s ease;
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+  }
+
+  .pin-submit {
+    padding: 14px 24px;
+    border-radius: 12px;
+    border: none;
+    background: #7c3aed;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-appearance: none;
+  }
+
+  .pin-submit:active {
+    background: #6d28d9;
+    transform: scale(0.97);
+  }
+
+  .buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    flex: 1;
+    justify-content: center;
+    max-width: 400px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 22px 20px;
+    border-radius: 16px;
+    border: 2px solid transparent;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    -webkit-appearance: none;
+    touch-action: manipulation;
+  }
+
+  .btn:active {
+    transform: scale(0.97);
+  }
+
+  .btn-confirm {
+    background: #10b981;
+    color: #fff;
+    box-shadow: 0 4px 24px rgba(16, 185, 129, 0.4);
+  }
+  .btn-confirm:active {
+    background: #059669;
+  }
+
+  .btn-skip {
+    background: #1c1c28;
+    border-color: #f59e0b;
+    color: #f59e0b;
+  }
+  .btn-skip:active {
+    background: rgba(245, 158, 11, 0.12);
+  }
+
+  .btn-stop {
+    background: #1c1c28;
+    border-color: #ef4444;
+    color: #ef4444;
+  }
+  .btn-stop:active {
+    background: rgba(239, 68, 68, 0.12);
+  }
+
+  .btn .icon {
+    font-size: 26px;
+  }
+
+  .status {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 14px;
+    color: #7070a0;
+    min-height: 24px;
+  }
+
+  .status.sent {
+    color: #10b981;
+    font-weight: 600;
+  }
+
+  .status.error {
+    color: #ef4444;
+  }
+
+  .btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🎟️ TicketBot Control</h1>
+</div>
+
+<div class="order-summary" id="summary">
+  <div class="label">Order Summary</div>
+  <div class="details" id="summaryDetails">Loading...</div>
+</div>
+
+<!-- PIN gate: shown when PIN is not in URL -->
+<div class="pin-gate" id="pinGate">
+  <div class="pin-label">Enter your PIN to continue</div>
+  <div class="pin-row">
+    <input class="pin-input" id="pinInput" type="tel" maxlength="6" inputmode="numeric" pattern="[0-9]*" placeholder="----" autocomplete="off">
+    <button class="pin-submit" id="pinSubmit">Go</button>
+  </div>
+</div>
+
+<!-- Action buttons: hidden until PIN is provided -->
+<div class="buttons hidden" id="actionButtons">
+  <button class="btn btn-confirm" id="btnConfirm" onclick="sendCommand('confirm')">
+    <span class="icon">✅</span> Place Order
+  </button>
+
+  <button class="btn btn-skip" id="btnSkip" onclick="sendCommand('skip')">
+    <span class="icon">⏭️</span> Skip This Order
+  </button>
+
+  <button class="btn btn-stop" id="btnStop" onclick="sendCommand('stop')">
+    <span class="icon">🛑</span> Stop Bot
+  </button>
+</div>
+
+<!-- Direct-access mode: user navigated here manually (no ?topic= in URL) -->
+<div class="pin-gate hidden" id="directAccess">
+  <div class="pin-label" style="margin-bottom:16px;font-size:15px;color:#e8e8f0;">Quick Control</div>
+  <div class="pin-label">ntfy Topic</div>
+  <div class="pin-row" style="margin-bottom:14px;">
+    <input class="pin-input" id="directTopic" type="text" placeholder="topic-id" autocomplete="off"
+           style="width:100%;max-width:300px;letter-spacing:0;font-size:16px;font-weight:500;">
+  </div>
+  <div class="pin-label">PIN</div>
+  <div class="pin-row" style="margin-bottom:20px;">
+    <input class="pin-input" id="directPin" type="tel" maxlength="6" inputmode="numeric" pattern="[0-9]*" placeholder="----" autocomplete="off">
+  </div>
+  <div class="buttons" style="gap:12px;">
+    <button class="btn btn-stop" onclick="sendDirect('stop')">
+      <span class="icon">🛑</span> Stop Bot
+    </button>
+    <button class="btn btn-skip" onclick="sendDirect('skip')">
+      <span class="icon">⏭️</span> Skip Current Order
+    </button>
+    <button class="btn btn-confirm" onclick="sendDirect('confirm')">
+      <span class="icon">✅</span> Confirm Order
+    </button>
+  </div>
+</div>
+
+<div class="status" id="status"></div>
+
+<script>
+  // ── Parse URL params ──────────────────────────────────────────────────────
+  const params = new URLSearchParams(window.location.search);
+  let   ntfyTopic = params.get('topic') || '';
+  let   pin       = params.get('pin')   || '';
+  const orderInfo = params.get('order') || 'Order ready';
+  const eventUrl  = params.get('event') || '';
+
+  // ── Direct-access mode (no URL params = user navigated here manually) ──
+  const isDirectAccess = !ntfyTopic;
+
+  if (isDirectAccess) {
+    // Hide order summary, show manual config form
+    document.getElementById('summary').classList.add('hidden');
+    document.getElementById('pinGate').classList.add('hidden');
+    document.getElementById('actionButtons').classList.add('hidden');
+    document.getElementById('directAccess').classList.remove('hidden');
+  } else {
+    // Normal flow: opened via Pushover notification link
+    document.getElementById('summaryDetails').textContent = decodeURIComponent(orderInfo);
+    document.getElementById('directAccess').classList.add('hidden');
+
+    // If PIN is already in the URL, skip the PIN gate and show buttons
+    if (pin) {
+      document.getElementById('pinGate').classList.add('hidden');
+      document.getElementById('actionButtons').classList.remove('hidden');
+    }
+  }
+
+  // ── PIN gate logic ────────────────────────────────────────────────────────
+  const pinInput = document.getElementById('pinInput');
+  const pinSubmit = document.getElementById('pinSubmit');
+
+  function unlockWithPin() {
+    const entered = pinInput.value.trim();
+    if (!entered) {
+      pinInput.classList.add('error');
+      setTimeout(() => pinInput.classList.remove('error'), 500);
+      return;
+    }
+    pin = entered;
+    document.getElementById('pinGate').classList.add('hidden');
+    document.getElementById('actionButtons').classList.remove('hidden');
+  }
+
+  pinSubmit.addEventListener('click', unlockWithPin);
+  pinInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') unlockWithPin();
+  });
+
+  // Auto-focus PIN input on mobile
+  if (!pin && ntfyTopic) {
+    setTimeout(() => pinInput.focus(), 300);
+  }
+
+  // ── Direct-access: load saved topic/pin from localStorage ────────────────
+  if (isDirectAccess) {
+    const savedTopic = localStorage.getItem('tb_topic') || '';
+    const savedPin   = localStorage.getItem('tb_pin')   || '';
+    if (savedTopic) document.getElementById('directTopic').value = savedTopic;
+    if (savedPin)   document.getElementById('directPin').value   = savedPin;
+  }
+
+  async function sendDirect(command) {
+    const topicEl = document.getElementById('directTopic');
+    const pinEl   = document.getElementById('directPin');
+    const topic   = topicEl.value.trim();
+    const pinVal  = pinEl.value.trim();
+
+    if (!topic) { topicEl.classList.add('error'); setTimeout(() => topicEl.classList.remove('error'), 500); return; }
+    if (!pinVal) { pinEl.classList.add('error'); setTimeout(() => pinEl.classList.remove('error'), 500); return; }
+
+    // Save for next time
+    localStorage.setItem('tb_topic', topic);
+    localStorage.setItem('tb_pin', pinVal);
+
+    // Reuse the main sendCommand logic by setting globals
+    ntfyTopic = topic;
+    pin = pinVal;
+    sendCommand(command);
+  }
+
+  // ── Send command to ntfy ──────────────────────────────────────────────────
+  let sent = false;
+
+  async function sendCommand(command) {
+    if (sent) return;
+    sent = true;
+
+    const statusEl = document.getElementById('status');
+    const buttons = document.querySelectorAll('.btn');
+    buttons.forEach(b => b.disabled = true);
+    // Also disable direct-access inputs
+    const dTopic = document.getElementById('directTopic');
+    const dPin = document.getElementById('directPin');
+    if (dTopic) dTopic.disabled = true;
+    if (dPin) dPin.disabled = true;
+
+    statusEl.textContent = 'Sending...';
+    statusEl.className = 'status';
+
+    try {
+      const resp = await fetch(`https://ntfy.sh/${ntfyTopic}`, {
+        method: 'POST',
+        body: `${command}:${pin}`
+      });
+
+      if (resp.ok) {
+        const labels = {
+          confirm: '✅ Order confirmation sent!',
+          skip:    '⏭️ Skip command sent.',
+          stop:    '🛑 Stop command sent.'
+        };
+        statusEl.textContent = labels[command] || 'Command sent.';
+        statusEl.className = 'status sent';
+
+        // Hide buttons, show a clean "done" state
+        document.getElementById('actionButtons').classList.add('hidden');
+        const btnId = { confirm: 'btnConfirm', skip: 'btnSkip', stop: 'btnStop' };
+        const btn = document.getElementById(btnId[command]);
+        if (btn) btn.style.opacity = '1';
+
+        // Show a "you can close this tab" hint
+        statusEl.textContent += '\nYou can close this tab.';
+
+        // Try to close — works if opened via window.open, otherwise no-op
+        setTimeout(() => { try { window.close(); } catch(e) {} }, 2000);
+      } else {
+        throw new Error(`HTTP ${resp.status}`);
+      }
+    } catch (e) {
+      statusEl.textContent = `Failed to send: ${e.message}. Tap to retry.`;
+      statusEl.className = 'status error';
+      sent = false;
+      buttons.forEach(b => b.disabled = false);
+    }
+  }
+</script>
+
+</body>
+</html>
